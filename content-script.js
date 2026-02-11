@@ -397,7 +397,7 @@ function renderPopup(payload) {
   const icon = document.createElement("img");
   icon.className = "ia-icon";
   icon.src = chrome.runtime.getURL(
-    "icons/accessibility_new_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg"
+    "icons/iax_icon.svg"
   );
   icon.alt = "";
   icon.setAttribute("aria-hidden", "true");

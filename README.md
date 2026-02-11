@@ -15,7 +15,6 @@ The popup is optimized for quick checks:
 - Closes automatically when you left/right click anywhere outside it.
 - Closes with `Escape`.
 - Adapts to light/dark theme (`prefers-color-scheme`).
-- Uses your Google Material Symbols `accessibility_new` icon files from `icons/`.
 
 ## Screenshot
 
