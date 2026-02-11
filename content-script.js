@@ -58,6 +58,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 });
 
 let clearPopupDismissHandlers = null;
+const SEMANTIC_ANCESTOR_SELECTOR =
+  'a[href], button, input, select, textarea, summary, [role]:not([role="generic"]):not([role="none"]):not([role="presentation"]), [contenteditable]:not([contenteditable="false"])';
+const MAX_SEMANTIC_ANCESTOR_STEPS = 5;
 
 function inspectTargetInPage(targetDescriptor) {
   const element = resolveTargetElement(targetDescriptor);
@@ -69,7 +72,7 @@ function inspectTargetInPage(targetDescriptor) {
     };
   }
 
-  const snapshot = computeAccessibilitySnapshot(element);
+  const snapshot = computeSnapshotWithSemanticFallback(element);
   return {
     ok: true,
     pointer: targetDescriptor.pointer || null,
@@ -128,9 +131,92 @@ function resolveTargetElement(targetDescriptor) {
 
 function computeAccessibilitySnapshot(element) {
   const nativeSnapshot = getNativeAccessibilitySnapshot(element);
-  const role = nativeSnapshot.role || inferRole(element);
+  const inferredRole = inferRole(element);
+  const role = pickPreferredRole(nativeSnapshot.role, inferredRole);
   const name = nativeSnapshot.name || inferName(element);
   return { role, name };
+}
+
+function computeSnapshotWithSemanticFallback(element) {
+  const snapshot = computeAccessibilitySnapshot(element);
+  if (!isGenericRole(snapshot.role)) {
+    return snapshot;
+  }
+
+  const ancestor = findSemanticAncestor(element, MAX_SEMANTIC_ANCESTOR_STEPS);
+  if (!ancestor) {
+    return snapshot;
+  }
+
+  const fallbackSnapshot = computeAccessibilitySnapshot(ancestor);
+  return shouldPreferFallbackSnapshot(snapshot, fallbackSnapshot)
+    ? fallbackSnapshot
+    : snapshot;
+}
+
+function pickPreferredRole(nativeRole, inferredRole) {
+  if (isGenericRole(nativeRole) && !isGenericRole(inferredRole)) {
+    return inferredRole;
+  }
+
+  return nativeRole || inferredRole;
+}
+
+function findSemanticAncestor(element, maxSteps) {
+  let current = element.parentElement;
+  let steps = 0;
+
+  while (current && steps < maxSteps) {
+    if (isSemanticFallbackCandidate(current)) {
+      return current;
+    }
+
+    if (current === document.body || current === document.documentElement) {
+      break;
+    }
+
+    current = current.parentElement;
+    steps += 1;
+  }
+
+  return null;
+}
+
+function isSemanticFallbackCandidate(element) {
+  if (!(element instanceof Element) || typeof element.matches !== "function") {
+    return false;
+  }
+
+  try {
+    return element.matches(SEMANTIC_ANCESTOR_SELECTOR);
+  } catch (_error) {
+    return false;
+  }
+}
+
+function shouldPreferFallbackSnapshot(snapshot, fallbackSnapshot) {
+  const currentGeneric = isGenericRole(snapshot.role);
+  const fallbackGeneric = isGenericRole(fallbackSnapshot.role);
+
+  if (currentGeneric && !fallbackGeneric) {
+    return true;
+  }
+
+  if (currentGeneric === fallbackGeneric) {
+    return !hasReadableValue(snapshot.name) && hasReadableValue(fallbackSnapshot.name);
+  }
+
+  return false;
+}
+
+function isGenericRole(role) {
+  const normalized = readString(role).toLowerCase();
+  return !normalized || normalized === "generic";
+}
+
+function hasReadableValue(value) {
+  const text = readString(value);
+  return Boolean(text && text !== "-");
 }
 
 function getNativeAccessibilitySnapshot(element) {
