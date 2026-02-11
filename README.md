@@ -17,12 +17,19 @@ The popup is optimized for quick checks:
 - Adapts to light/dark theme (`prefers-color-scheme`).
 - Uses your Google Material Symbols `accessibility_new` icon files from `icons/`.
 
+## Screenshot
+
+![Inspect AX screenshot](./assets/screenshot-inspect-ax.png)
+
+
 ## Install (Load unpacked)
 
-1. Open `chrome://extensions`.
-2. Enable `Developer mode`.
-3. Click `Load unpacked`.
-4. Select this folder: `/Users/gokay/Documents/inspect-ax`.
+1. Download this repository as ZIP.
+2. Extract the ZIP.
+3. Open `chrome://extensions`.
+4. Enable `Developer mode`.
+5. Click `Load unpacked`.
+6. Select the extracted project folder.
 
 ## Usage
 
@@ -37,11 +44,3 @@ The popup is optimized for quick checks:
 - Target payload is sanitized in the background service worker before use.
 - If `getComputedAccessibleNode` is not available on the page, role/name are inferred from ARIA attributes and semantic HTML.
 - If the right-click target is inside an iframe, selector resolution can fail in some cases.
-
-## Release docs
-
-- GitHub release checklist: `docs/RELEASE_CHECKLIST.md`
-- Chrome Web Store checklist: `docs/CHROME_WEB_STORE_CHECKLIST.md`
-- Store listing draft: `docs/STORE_LISTING.md`
-- Package + release guide: `docs/PACKAGE_AND_RELEASE.md`
-
