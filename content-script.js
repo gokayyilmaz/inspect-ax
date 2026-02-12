@@ -161,15 +161,11 @@ function computeSnapshotWithSemanticFallback(element) {
     return snapshot;
   }
 
-  const ancestor = findSemanticAncestor(element, MAX_SEMANTIC_ANCESTOR_STEPS);
-  if (!ancestor) {
-    return snapshot;
-  }
-
-  const fallbackSnapshot = computeAccessibilitySnapshot(ancestor);
-  return shouldPreferFallbackSnapshot(snapshot, fallbackSnapshot)
-    ? fallbackSnapshot
-    : snapshot;
+  const ancestorSnapshot = findNonGenericAncestorSnapshot(
+    element,
+    MAX_SEMANTIC_ANCESTOR_STEPS
+  );
+  return ancestorSnapshot || snapshot;
 }
 
 function pickPreferredRole(nativeRole, inferredRole) {
@@ -180,13 +176,16 @@ function pickPreferredRole(nativeRole, inferredRole) {
   return nativeRole || inferredRole;
 }
 
-function findSemanticAncestor(element, maxSteps) {
+function findNonGenericAncestorSnapshot(element, maxSteps) {
   let current = element.parentElement;
   let steps = 0;
 
   while (current && steps < maxSteps) {
     if (isSemanticFallbackCandidate(current)) {
-      return current;
+      const snapshot = computeAccessibilitySnapshot(current);
+      if (!isGenericRole(snapshot.role)) {
+        return snapshot;
+      }
     }
 
     if (current === document.body || current === document.documentElement) {
@@ -221,29 +220,9 @@ function hasPreferredExplicitFallbackRole(element) {
   return explicitRole && PREFERRED_EXPLICIT_FALLBACK_ROLES.has(explicitRole);
 }
 
-function shouldPreferFallbackSnapshot(snapshot, fallbackSnapshot) {
-  const currentGeneric = isGenericRole(snapshot.role);
-  const fallbackGeneric = isGenericRole(fallbackSnapshot.role);
-
-  if (currentGeneric && !fallbackGeneric) {
-    return true;
-  }
-
-  if (currentGeneric === fallbackGeneric) {
-    return !hasReadableValue(snapshot.name) && hasReadableValue(fallbackSnapshot.name);
-  }
-
-  return false;
-}
-
 function isGenericRole(role) {
   const normalized = readString(role).toLowerCase();
   return !normalized || normalized === "generic";
-}
-
-function hasReadableValue(value) {
-  const text = readString(value);
-  return Boolean(text && text !== "-");
 }
 
 function getNativeAccessibilitySnapshot(element) {
