@@ -59,8 +59,26 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
 let clearPopupDismissHandlers = null;
 const SEMANTIC_ANCESTOR_SELECTOR =
-  'a[href], button, input, select, textarea, summary, [role]:not([role="generic"]):not([role="none"]):not([role="presentation"]), [contenteditable]:not([contenteditable="false"])';
+  'a[href], button, input, select, textarea, summary, [contenteditable]:not([contenteditable="false"])';
 const MAX_SEMANTIC_ANCESTOR_STEPS = 5;
+const PREFERRED_EXPLICIT_FALLBACK_ROLES = new Set([
+  "button",
+  "checkbox",
+  "combobox",
+  "link",
+  "listbox",
+  "menuitem",
+  "menuitemcheckbox",
+  "menuitemradio",
+  "option",
+  "radio",
+  "searchbox",
+  "slider",
+  "spinbutton",
+  "switch",
+  "tab",
+  "textbox",
+]);
 
 function inspectTargetInPage(targetDescriptor) {
   const element = resolveTargetElement(targetDescriptor);
@@ -187,11 +205,20 @@ function isSemanticFallbackCandidate(element) {
     return false;
   }
 
+  if (hasPreferredExplicitFallbackRole(element)) {
+    return true;
+  }
+
   try {
     return element.matches(SEMANTIC_ANCESTOR_SELECTOR);
   } catch (_error) {
     return false;
   }
+}
+
+function hasPreferredExplicitFallbackRole(element) {
+  const explicitRole = readString(element.getAttribute("role")).toLowerCase();
+  return explicitRole && PREFERRED_EXPLICIT_FALLBACK_ROLES.has(explicitRole);
 }
 
 function shouldPreferFallbackSnapshot(snapshot, fallbackSnapshot) {
